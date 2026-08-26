@@ -175,8 +175,10 @@ pub fn round_snapshot(db: &VotingDb, round_id: &str) -> Result<RoundRecoverySnap
 /// Clears unconfirmed recovery artifacts for one round.
 ///
 /// Ballot intent, recorded vote confirmations, and imported delegation
-/// capabilities are preserved. Use [`VotingDb::clear_round`] to remove the
-/// entire round.
+/// capabilities are preserved. Removing the entire round is `VotingDb`'s
+/// `clear_round`, which is gated behind `test-fixtures` and is not available to
+/// production builds -- deliberately, since it destroys RNG-sampled material no
+/// seed can regenerate.
 pub fn clear(db: &VotingDb, round_id: &str) -> Result<(), VotingError> {
     db.clear_recovery_state(round_id)
 }

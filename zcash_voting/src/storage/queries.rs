@@ -574,6 +574,27 @@ pub fn list_rounds(conn: &Connection, wallet_id: &str) -> Result<Vec<RoundSummar
 
 /// Delete a round and all associated data. Child tables (bundles, cached_tree_state,
 /// proofs, witnesses, votes) are removed automatically via ON DELETE CASCADE.
+///
+/// # Not compiled into production builds
+///
+/// Gated behind `test-fixtures` because what it destroys cannot be rebuilt. The
+/// cascade takes `bundles`, and `bundles` holds `van_comm_rand`: 32 bytes
+/// sampled from `OsRng`, derived from nothing, and whose VAN commitment is
+/// already published on chain. A round that loses it is permanently unvotable
+/// even though the wallet's stake is still committed to it. `alpha`, `rseed_signed`, `rseed_output` and
+/// `padded_note_secrets` are sampled the same way, and the cascade also takes
+/// Keystone signatures the user's hardware wallet may not produce again.
+///
+/// A wallet that wants to start a round over wants an idempotent
+/// re-initialisation -- reset the derivable columns, leave the sampled ones
+/// alone. It does not want this. Calling this because a network read came back
+/// empty is how a round gets destroyed by one dropped packet, since an empty
+/// read and a failed read are indistinguishable at this layer.
+///
+/// Cargo features are additive and are not a security boundary; production
+/// builds should not enable `test-fixtures`. The same caveat is documented on
+/// [`crate::vote::insert_recovery_fixture`], which shares this gate.
+#[cfg(any(test, feature = "test-fixtures"))]
 pub fn clear_round(conn: &Connection, round_id: &str, wallet_id: &str) -> Result<(), VotingError> {
     conn.execute(
         "DELETE FROM rounds WHERE round_id = :round_id AND wallet_id = :wallet_id",

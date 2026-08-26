@@ -462,6 +462,16 @@ impl VotingDb {
     }
 
     /// Delete all data for a round.
+    ///
+    /// # Not compiled into production builds
+    ///
+    /// Gated behind `test-fixtures`. See [`queries::clear_round`] for what is
+    /// destroyed and why none of it can be regenerated from the wallet seed.
+    ///
+    /// A gate rather than a documented warning, because a warning leaves the
+    /// method callable: reaching this from a production build takes adding the
+    /// feature to a manifest, where a reviewer sees it.
+    #[cfg(any(test, feature = "test-fixtures"))]
     pub fn clear_round(&self, round_id: &str) -> Result<(), VotingError> {
         let conn = self.conn();
         let wallet_id = self.wallet_id();

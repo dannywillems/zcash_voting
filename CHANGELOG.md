@@ -4,6 +4,30 @@ All notable changes to this workspace will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this workspace adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Removed
+- **Breaking:** `VotingDb::clear_round`, `RoundApi::delete_round` and
+  `queries::clear_round` are no longer compiled into production builds. They are
+  gated behind the existing `test-fixtures` feature, the same gate
+  `vote::insert_recovery_fixture` already uses.
+
+  They delete a round and cascade `bundles` away with it, and `bundles` holds
+  `van_comm_rand`: 32 bytes sampled from `OsRng`, derived from nothing, and whose
+  VAN commitment is already published on chain. A round that loses it is
+  permanently unvotable even though the wallet's stake is still committed to it.
+  `alpha`, `rseed_signed`, `rseed_output` and `padded_note_secrets` are sampled
+  the same way, and the cascade also takes Keystone signatures the user's
+  hardware wallet may not produce again.
+
+  Cargo features are additive and are not a security boundary; production builds
+  should not enable `test-fixtures`.
+
+  A wallet that wants to start a round over wants an idempotent
+  re-initialisation -- reset the derivable columns, leave the sampled ones alone.
+  Callers still needing the destructive behaviour in tests or fixtures should
+  enable `test-fixtures`.
+
 ## v3.1.0-rc.10
 
 ### Added

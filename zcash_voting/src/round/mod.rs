@@ -361,6 +361,14 @@ impl VotingDb {
     }
 
     /// Deletes all persisted state for one round in the current wallet scope.
+    ///
+    /// # Not compiled into production builds
+    ///
+    /// Gated behind `test-fixtures`, as a thin alias for
+    /// [`crate::storage::VotingDb::clear_round`]; see there for what is
+    /// destroyed. The name is part of why the gate is needed: `delete_round`
+    /// reads like dropping a cache entry, and it is not.
+    #[cfg(any(test, feature = "test-fixtures"))]
     pub fn delete_round(&self, round_id: &str) -> Result<(), VotingError> {
         self.clear_round(round_id)
     }
