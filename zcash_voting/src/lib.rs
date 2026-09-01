@@ -17,6 +17,7 @@ compile_error!("enable exactly one of the `lrz` or `zakura` features");
 
 pub mod action;
 pub mod backend;
+pub mod carved_delegation;
 pub mod config;
 pub mod confirmation;
 pub mod delegate;
