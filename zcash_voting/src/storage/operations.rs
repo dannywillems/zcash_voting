@@ -1621,6 +1621,33 @@ impl VotingDb {
         queries::store_delegation_tx_hash(&conn, round_id, &wallet_id, bundle_index, tx_hash)
     }
 
+    /// Restores delegation state carved out of a wiped database.
+    ///
+    /// Owns the transaction, so invariant 1 of
+    /// [`crate::carved_delegation::restore_carved_delegation`] -- all bundles
+    /// or none -- holds for every caller rather than depending on each one to
+    /// remember.
+    ///
+    /// See that module for why this exists and why
+    /// `import_delegation_capability` is not the right tool for it.
+    pub fn restore_carved_delegation(
+        &self,
+        round_id: &str,
+        bundles: &[crate::carved_delegation::CarvedBundle],
+    ) -> Result<crate::carved_delegation::RestoreOutcome, VotingError> {
+        let mut conn = self.conn();
+        let wallet_id = self.wallet_id();
+        let tx = conn.transaction().map_err(|e| VotingError::Internal {
+            message: format!("failed to begin carved delegation restore: {e}"),
+        })?;
+        let outcome =
+            crate::carved_delegation::restore_carved_delegation(&tx, round_id, &wallet_id, bundles)?;
+        tx.commit().map_err(|e| VotingError::Internal {
+            message: format!("failed to commit carved delegation restore: {e}"),
+        })?;
+        Ok(outcome)
+    }
+
     pub fn get_delegation_tx_hash(
         &self,
         round_id: &str,
