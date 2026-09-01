@@ -12,18 +12,34 @@
 //!
 //! # When this is still the only recourse
 //!
-//! Narrower than it was. Since 3.1.0, LOCAL voting-hotkey delegation derives
-//! its VAN blinding from the stored hotkey secret and the exact round and
-//! bundle identity, so restoring that secret reconstructs the same VAN with no
-//! carving at all -- see `hotkey::VotingHotkey::stored_secret` and
-//! `restored_hotkey_reconstructs_van_after_voting_database_loss`. Two cases
-//! are left:
+//! Narrower than it was, but not gone. Since 3.1.0, LOCAL voting-hotkey
+//! delegation derives its blinding as
+//! `VanBlinding::derive(stored_secret, round_id, bundle_index)` rather than
+//! sampling it, so the blinding itself returns for free to anyone still
+//! holding the secret.
+//!
+//! That is a REPRODUCIBILITY property, not a recovery path: nothing upstream
+//! repairs a database. What it buys is that re-running setup from an empty one
+//! lands on the same value, which
+//! `restored_hotkey_reconstructs_van_after_voting_database_loss` is what
+//! demonstrates.
+//!
+//! And reproducing the blinding is not yet reproducing the VAN. The VAN
+//! commits to the bundle's total weight and derived addresses as well, so the
+//! value the chain holds only comes back if the same notes land in the same
+//! bundle index -- which is why the bundling policy that pairs with this is
+//! frozen (`recoverable_bundle_policy_v1`). A wallet whose note set has since
+//! changed can hold the right secret and still rebuild a different VAN.
+//!
+//! Three cases are therefore left:
 //!
 //! 1. Rounds created before that change, whose blinding really was random.
 //!    Those are the wiped devices this module exists for.
 //! 2. `with_round_bound_voting_target`, which has no hotkey secret, so its
 //!    blinding "remains randomly sampled and must be retained through the
 //!    existing custody recovery material".
+//! 3. Any wallet whose notes moved between the original delegation and the
+//!    rebuild, where the derivation reproduces the blinding but not the VAN.
 //!
 //! Prefer the derivation wherever it applies. This is for the rounds it cannot
 //! reach.
