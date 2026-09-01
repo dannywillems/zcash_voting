@@ -4,11 +4,29 @@
 //!
 //! `clear_round` used to run before every `initRound`, to dodge a UNIQUE
 //! constraint on retry. It cascades `bundles` away, and `bundles` holds
-//! `van_comm_rand` -- sampled from `OsRng`, never derived from the seed, and
-//! writable through no exported call. Reopening a poll therefore destroyed the
-//! only opening of a VAN the chain already held, and the wallet's client can
-//! now carve those secrets back out of the freed pages and the write-ahead
-//! log. Having carved them, it had nowhere to put them.
+//! `van_comm_rand`, which was sampled from `OsRng` and writable through no
+//! exported call. Reopening a poll therefore destroyed the only opening of a
+//! VAN the chain already held. The wallet's client can now carve those secrets
+//! back out of the freed pages and the write-ahead log, and had nowhere to put
+//! them.
+//!
+//! # When this is still the only recourse
+//!
+//! Narrower than it was. Since 3.1.0, LOCAL voting-hotkey delegation derives
+//! its VAN blinding from the stored hotkey secret and the exact round and
+//! bundle identity, so restoring that secret reconstructs the same VAN with no
+//! carving at all -- see `hotkey::VotingHotkey::stored_secret` and
+//! `restored_hotkey_reconstructs_van_after_voting_database_loss`. Two cases
+//! are left:
+//!
+//! 1. Rounds created before that change, whose blinding really was random.
+//!    Those are the wiped devices this module exists for.
+//! 2. `with_round_bound_voting_target`, which has no hotkey secret, so its
+//!    blinding "remains randomly sampled and must be retained through the
+//!    existing custody recovery material".
+//!
+//! Prefer the derivation wherever it applies. This is for the rounds it cannot
+//! reach.
 //!
 //! # Why not `import_delegation_capability`
 //!
